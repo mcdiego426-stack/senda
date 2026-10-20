@@ -85,6 +85,23 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
 .reset{display:block;margin:30px auto 0;background:none;border:0;color:var(--muted);font-size:.9rem;text-decoration:underline;text-underline-offset:3px}
 .sync{text-align:center;color:var(--muted);font-size:.78rem;margin-top:18px}
 
+.goal{background:var(--surface);border:1px solid var(--line);border-radius:14px;padding:16px;margin-top:22px}
+.goal-row{display:flex;justify-content:space-between;align-items:baseline;gap:10px}
+.goal-row b{font-weight:600}
+.goal-row span{color:var(--muted);font-size:.9rem}
+.bar{height:8px;border-radius:99px;background:var(--soft);margin:12px 0 10px;overflow:hidden}
+.bar i{display:block;height:100%;width:0;background:var(--gold);border-radius:99px;transition:width .4s ease}
+.goal-sub{color:var(--muted);font-size:.88rem}
+.patterns{margin-top:6px}
+.pattern{display:flex;justify-content:space-between;gap:12px;padding:10px 0;border-bottom:1px solid var(--line);font-size:.95rem}
+.pattern span{color:var(--muted)}
+.tag{margin:0 0 22px}
+.tag h3{font-size:1rem;font-weight:600;margin:0 0 10px}
+.chips{display:flex;flex-wrap:wrap;gap:8px}
+.chip{padding:9px 13px;border-radius:99px;border:1.5px solid var(--line);background:var(--surface);font-size:.9rem}
+.chip[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.answer{font-family:"Spectral",Georgia,serif;font-style:italic;font-size:1.15rem;color:var(--ink)!important;background:var(--soft);border-radius:12px;padding:14px;margin:12px 0 0!important}
+.answer:empty{display:none}
 /* overlays */
 .overlay{position:fixed;inset:0;background:var(--bg);z-index:20;overflow-y:auto;padding:calc(env(safe-area-inset-top,0px) + 28px) 22px calc(env(safe-area-inset-bottom,0px) + 28px);display:none}
 .overlay.open{display:block;animation:fade .25s ease}
@@ -126,6 +143,11 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
     <div class="count-label" id="countLabel">días firmes</div>
     <p class="phrase" id="phrase"></p>
     <div class="week" id="week"></div>
+    <div class="goal">
+      <div class="goal-row"><b id="goalTitle"></b><span id="goalLeft"></span></div>
+      <div class="bar"><i id="goalBar"></i></div>
+      <div class="goal-sub" id="goalSub"></div>
+    </div>
   </section>
 
   <button class="help" id="openHelp">Necesito fuerza ahora<small>Abre esto en el momento difícil</small></button>
@@ -137,6 +159,11 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
     <div class="stat"><b id="best">0</b><span>mejor racha</span></div>
     <div class="stat"><b id="wins">0</b><span>veces que resististe</span></div>
   </div>
+
+  <section class="patterns" id="patterns" hidden>
+    <h2 class="section-title">Tus patrones</h2>
+    <div id="patternList"></div>
+  </section>
 
   <button class="reset" id="openReset">Volver a empezar</button>
   <div class="sync" id="sync">Tus datos se guardan solo en este celular</div>
@@ -161,6 +188,15 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
         <text id="clock" x="75" y="86" text-anchor="middle">10:00</text>
       </svg>
       <small>Puedo, pero solo con Dios.</small>
+    </div>
+    <div class="tag">
+      <h3>¿Qué engaño apareció?</h3>
+      <div class="chips" id="lieChips"></div>
+      <p class="answer" id="lieAnswer"></p>
+    </div>
+    <div class="tag">
+      <h3>¿Cómo te sientes?</h3>
+      <div class="chips" id="feelChips"></div>
     </div>
     <button class="btn primary" id="overcome">Lo superé</button>
     <button class="btn ghost" id="closeHelp">Cerrar</button>
@@ -194,6 +230,23 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
     "Puedo, pero solo con Dios.",
     "Hoy, solo por hoy."
   ];
+  const LIES = [
+    {id:"poquito", label:"Solo un poquito", answer:"Un poquito siempre ha sido el inicio de todo. No abro esa puerta."},
+    {id:"merezco", label:"Me lo merezco", answer:"Me merezco descanso de verdad, no algo que me deja peor."},
+    {id:"yacai", label:"Ya caí, qué más da", answer:"Una caída no me obliga a la segunda. Me levanto ahora."},
+    {id:"manana", label:"Mañana empiezo", answer:"La única decisión que tengo es la de hoy, y la tomo ahora."},
+    {id:"nadie", label:"Nadie se va a enterar", answer:"Dios está aquí, y yo también me voy a enterar."},
+    {id:"nunca", label:"Nunca voy a cambiar", answer:"Eso es mentira. Ya he resistido antes, y con Dios puedo."}
+  ];
+  const FEELS = [
+    {id:"cansado", label:"Cansado"},
+    {id:"solo", label:"Solo o aburrido"},
+    {id:"estres", label:"Estresado"},
+    {id:"triste", label:"Triste"}
+  ];
+  const MILESTONES = [7,14,21,31];
+  const FINAL = "2026-11-20";
+  let pick = {lie:null, feel:null};
   const KEY = "senda-estado";
   const $ = id => document.getElementById(id);
 
@@ -210,6 +263,18 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   let state;
   try { const raw = localStorage.getItem(KEY); state = raw ? JSON.parse(raw) : null; } catch(e){ state = null; }
   if(!valid(state)) state = fresh();
+  if(!Array.isArray(state.entries)) state.entries = [];
+  function addEntry(kind){
+    const d = new Date();
+    state.entries.push({date:ymd(d), hour:d.getHours(), kind, lie:pick.lie, feel:pick.feel});
+    if(state.entries.length > 500) state.entries = state.entries.slice(-500);
+  }
+  function franja(h){ return h<6 ? "Madrugada" : h<12 ? "Mañana" : h<19 ? "Tarde" : "Noche"; }
+  function top(list, key){
+    const c = {}; list.forEach(e => { if(e[key]!=null) c[e[key]] = (c[e[key]]||0)+1; });
+    let best=null, n=0; for(const k in c) if(c[k]>n){best=k;n=c[k];}
+    return best;
+  }
 
 
   function save(){
@@ -264,6 +329,42 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
       li.appendChild(b); list.appendChild(li);
     });
 
+    const next = MILESTONES.find(m => m > n);
+    if(next){
+      $("goalTitle").textContent = "Próxima meta: " + next + " días";
+      const left = next - n;
+      $("goalLeft").textContent = "te " + (left===1?"falta 1 día":"faltan " + left + " días");
+      const prev = [...MILESTONES].reverse().find(m => m <= n) || 0;
+      $("goalBar").style.width = Math.round((n - prev) / (next - prev) * 100) + "%";
+    } else {
+      $("goalTitle").textContent = "¡Mes completo!";
+      $("goalLeft").textContent = "";
+      $("goalBar").style.width = "100%";
+    }
+    const toFinal = daysBetween(t, FINAL);
+    $("goalSub").textContent = toFinal > 1 ? "Faltan " + toFinal + " días para el 20 de noviembre"
+      : toFinal === 1 ? "Mañana es 20 de noviembre"
+      : toFinal === 0 ? "Hoy es 20 de noviembre. ¡Lo lograste con Dios!"
+      : "Meta del 20 de noviembre cumplida";
+
+    const es = state.entries;
+    if(es.length >= 3){
+      const tl = top(es,"lie"), tf = top(es,"feel");
+      const tfr = top(es.map(e => ({f:franja(e.hour)})),"f");
+      const rows = [];
+      rows.push(["Momento más difícil", tfr]);
+      if(tf) rows.push(["Cómo te sueles sentir", FEELS.find(x=>x.id===tf).label]);
+      if(tl) rows.push(["Engaño más común", LIES.find(x=>x.id===tl).label]);
+      const pl = $("patternList"); pl.innerHTML = "";
+      rows.forEach(([a,b]) => {
+        const r = document.createElement("div"); r.className = "pattern";
+        const x = document.createElement("span"); x.textContent = a;
+        const y = document.createElement("b"); y.textContent = b;
+        r.appendChild(x); r.appendChild(y); pl.appendChild(r);
+      });
+      $("patterns").hidden = false;
+    } else { $("patterns").hidden = true; }
+
     $("best").textContent = state.best;
     $("wins").textContent = state.wins;
   }
@@ -276,6 +377,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
     $("ring").style.strokeDashoffset = C * (1 - left/TOTAL);
   }
   function openHelp(){
+    bindHelpFresh();
     left = TOTAL; draw();
     $("help").classList.add("open");
     clearInterval(tick);
@@ -284,7 +386,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   }
   function closeHelp(){ clearInterval(tick); $("help").classList.remove("open"); }
   function overcome(){
-    state.wins = (state.wins||0) + 1; save(); render();
+    state.wins = (state.wins||0) + 1; addEntry("win"); save(); render();
     clearInterval(tick);
     const body = $("helpBody");
     body.innerHTML = '<div class="done-msg"><h2>Una victoria más.</h2><p>Dios estuvo contigo en esto. Gracias por no soltar su mano.</p><button class="btn primary" id="doneBtn">Regresar</button></div>';
@@ -294,10 +396,33 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
     });
     $("doneBtn").focus();
   }
+  function chipRow(el, items, key, onPick){
+    el.innerHTML = "";
+    items.forEach(it => {
+      const b = document.createElement("button");
+      b.className = "chip"; b.textContent = it.label; b.setAttribute("aria-pressed", pick[key]===it.id);
+      b.addEventListener("click", () => {
+        pick[key] = pick[key]===it.id ? null : it.id;
+        [...el.children].forEach(c => c.setAttribute("aria-pressed", "false"));
+        if(pick[key]) b.setAttribute("aria-pressed","true");
+        if(onPick) onPick();
+      });
+      el.appendChild(b);
+    });
+  }
   function bindHelp(){
+    pick = {lie:null, feel:null};
+    chipRow($("lieChips"), LIES, "lie", () => {
+      const l = LIES.find(x => x.id === pick.lie);
+      $("lieAnswer").textContent = l ? "“" + l.answer + "”" : "";
+    });
+    chipRow($("feelChips"), FEELS, "feel");
     $("ring").style.strokeDasharray = C;
     $("closeHelp").addEventListener("click", closeHelp);
     $("overcome").addEventListener("click", overcome);
+  }
+  function bindHelpFresh(){
+    $("helpBody").innerHTML = helpHTML; bindHelp();
   }
   $("openHelp").addEventListener("click", openHelp);
   bindHelp();
@@ -308,6 +433,7 @@ button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
   $("confirmReset").addEventListener("click", () => {
     state.best = Math.max(state.best, streakDays());
     state.start = today();
+    pick = {lie:null, feel:null}; addEntry("fall");
     save(); render();
     $("reset").classList.remove("open");
   });
