@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Senda</title>
+<link rel="apple-touch-icon" href="icon-180.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<link rel="manifest" href="manifest.json">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Senda">
+<meta name="theme-color" content="#34508A">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Spectral:ital,wght@0,300;0,500;1,300&family=Figtree:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#EDF0F3; --surface:#FFFFFF; --ink:#1E2836; --muted:#5E6A7A; --line:#D6DCE3;
+  --accent:#34508A; --accent-ink:#FFFFFF; --gold:#C79A1E; --soft:#E2E8F1;
+  color-scheme:light;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px);
+  padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme:dark){
+  :root:not([data-theme="light"]){
+    --bg:#121822; --surface:#1B2330; --ink:#E6EAF0; --muted:#97A2B2; --line:#2A3443;
+    --accent:#8FA8DC; --accent-ink:#121822; --gold:#E2B84A; --soft:#222C3B;
+    color-scheme:dark;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#121822; --surface:#1B2330; --ink:#E6EAF0; --muted:#97A2B2; --line:#2A3443;
+  --accent:#8FA8DC; --accent-ink:#121822; --gold:#E2B84A; --soft:#222C3B;
+  color-scheme:dark;
+}
+*,*::before,*::after{box-sizing:border-box}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+body{margin:0;background:var(--bg);color:var(--ink);font-family:"Figtree",system-ui,-apple-system,"Segoe UI",sans-serif;font-size:16px;line-height:1.5;-webkit-font-smoothing:antialiased}
+main{max-width:460px;margin:0 auto;padding:28px 20px 40px}
+h1,h2{font-family:"Spectral",Georgia,serif;font-weight:500;margin:0}
+button{font:inherit;color:inherit;cursor:pointer}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+
+.top{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:28px}
+.top h1{font-size:1.5rem;letter-spacing:.01em}
+.top .date{color:var(--muted);font-size:.9rem}
+
+.hero{text-align:center;padding:8px 0 24px}
+.flame{width:44px;height:64px;display:block;margin:0 auto 4px}
+.flame path{fill:var(--gold)}
+.flame .core{fill:var(--bg);opacity:.55}
+.count{font-family:"Spectral",Georgia,serif;font-weight:300;font-size:6.5rem;line-height:1;margin:0}
+.count-label{color:var(--muted);margin-top:6px}
+.phrase{font-family:"Spectral",Georgia,serif;font-style:italic;font-weight:300;font-size:1.15rem;margin:20px auto 0;max-width:30ch}
+
+.week{display:flex;justify-content:center;gap:10px;margin:22px 0 4px}
+.week span{width:30px;text-align:center;font-size:.75rem;color:var(--muted)}
+.week i{display:block;width:12px;height:12px;border-radius:50%;margin:0 auto 4px;border:1.5px solid var(--line)}
+.week i.on{background:var(--gold);border-color:var(--gold)}
+.week i.today{border-color:var(--accent)}
+
+.help{display:block;width:100%;margin:26px 0 30px;padding:18px;border:0;border-radius:16px;background:var(--accent);color:var(--accent-ink);font-weight:600;font-size:1.05rem}
+.help small{display:block;font-weight:400;opacity:.85;font-size:.85rem;margin-top:2px}
+
+.section-title{font-size:1.15rem;margin-bottom:12px}
+.habits{list-style:none;margin:0;padding:0;background:var(--surface);border-radius:14px;border:1px solid var(--line)}
+.habits li+li{border-top:1px solid var(--line)}
+.habit{display:flex;align-items:center;gap:14px;width:100%;padding:15px 16px;background:none;border:0;text-align:left}
+.check{flex:none;width:26px;height:26px;border-radius:8px;border:1.5px solid var(--line);display:grid;place-items:center;transition:background .15s,border-color .15s}
+.check svg{width:16px;height:16px;opacity:0}
+.habit[aria-pressed="true"] .check{background:var(--accent);border-color:var(--accent)}
+.habit[aria-pressed="true"] .check svg{opacity:1}
+.check svg path{stroke:var(--accent-ink)}
+.habit .name{flex:1}
+.habit .streak{color:var(--muted);font-size:.85rem;white-space:nowrap}
+
+.stats{display:flex;gap:12px;margin:24px 0}
+.stat{flex:1;background:var(--soft);border-radius:12px;padding:14px}
+.stat b{display:block;font-family:"Spectral",Georgia,serif;font-weight:500;font-size:1.6rem;line-height:1.1}
+.stat span{color:var(--muted);font-size:.85rem}
+
+.reset{display:block;margin:30px auto 0;background:none;border:0;color:var(--muted);font-size:.9rem;text-decoration:underline;text-underline-offset:3px}
+.sync{text-align:center;color:var(--muted);font-size:.78rem;margin-top:18px}
+
+/* overlays */
+.overlay{position:fixed;inset:0;background:var(--bg);z-index:20;overflow-y:auto;padding:calc(env(safe-area-inset-top,0px) + 28px) 22px calc(env(safe-area-inset-bottom,0px) + 28px);display:none}
+.overlay.open{display:block;animation:fade .25s ease}
+@keyframes fade{from{opacity:0}to{opacity:1}}
+@media (prefers-reduced-motion:reduce){.overlay.open{animation:none}.check{transition:none}}
+.sheet{max-width:440px;margin:0 auto}
+.sheet h2{font-size:1.9rem;line-height:1.2;margin-bottom:8px}
+.sheet p{color:var(--muted);margin:0 0 20px}
+.steps{list-style:none;padding:0;margin:0 0 24px;counter-reset:s}
+.steps li{counter-increment:s;display:flex;gap:14px;padding:12px 0;border-bottom:1px solid var(--line)}
+.steps li::before{content:counter(s);flex:none;width:28px;height:28px;border-radius:50%;background:var(--soft);display:grid;place-items:center;font-size:.85rem;font-weight:600;color:var(--accent)}
+.prayer{font-family:"Spectral",Georgia,serif;font-style:italic;font-size:1.35rem;text-align:center;margin:8px 0 24px}
+.timer{text-align:center;margin:0 0 26px}
+.timer svg{width:150px;height:150px}
+.timer .track{stroke:var(--line)}
+.timer .bar{stroke:var(--gold);transition:stroke-dashoffset 1s linear}
+.timer text{fill:var(--ink);font-family:"Spectral",Georgia,serif;font-size:30px}
+.timer small{display:block;color:var(--muted);margin-top:6px;font-size:.88rem}
+.btn{display:block;width:100%;padding:16px;border-radius:14px;border:0;font-weight:600;margin-top:10px}
+.btn.primary{background:var(--accent);color:var(--accent-ink)}
+.btn.ghost{background:var(--soft);color:var(--ink)}
+.done-msg{text-align:center;padding-top:18vh}
+.done-msg h2{margin-bottom:12px}
+</style>
+</head>
+<body>
+<main>
+  <header class="top">
+    <h1>Senda</h1>
+    <span class="date" id="today"></span>
+  </header>
+
+  <section class="hero" aria-live="polite">
+    <svg class="flame" viewBox="0 0 44 64" aria-hidden="true">
+      <path d="M22 2C26 14 38 22 38 40a16 16 0 0 1-32 0C6 28 14 22 16 12c3 6 5 9 8 10C24 16 23 8 22 2Z"/>
+      <path class="core" d="M22 34c3 4 6 6 6 11a6 6 0 0 1-12 0c0-4 3-6 6-11Z"/>
+    </svg>
+    <p class="count" id="count">0</p>
+    <div class="count-label" id="countLabel">días firmes</div>
+    <p class="phrase" id="phrase"></p>
+    <div class="week" id="week"></div>
+  </section>
+
+  <button class="help" id="openHelp">Necesito fuerza ahora<small>Abre esto en el momento difícil</small></button>
+
+  <h2 class="section-title">Hoy</h2>
+  <ul class="habits" id="habits"></ul>
+
+  <div class="stats">
+    <div class="stat"><b id="best">0</b><span>mejor racha</span></div>
+    <div class="stat"><b id="wins">0</b><span>veces que resististe</span></div>
+  </div>
+
+  <button class="reset" id="openReset">Volver a empezar</button>
+  <div class="sync" id="sync">Tus datos se guardan solo en este celular</div>
+</main>
+
+<!-- Ayuda -->
+<div class="overlay" id="help" role="dialog" aria-modal="true" aria-labelledby="helpTitle">
+  <div class="sheet" id="helpBody">
+    <h2 id="helpTitle">Respira. Esto pasa.</h2>
+    <p>La fuerza no tiene que ser tuya. Haz esto ahora mismo:</p>
+    <ol class="steps">
+      <li>Levántate y sal del lugar donde estás.</li>
+      <li>Deja el celular boca abajo o en otro cuarto.</li>
+      <li>Di en voz baja la oración de abajo.</li>
+      <li>Aguanta los 10 minutos. La ola sube y luego baja.</li>
+    </ol>
+    <p class="prayer">“Jesús, no tengo fuerza.<br>Pon tú la que me falta.”</p>
+    <div class="timer">
+      <svg viewBox="0 0 150 150" aria-hidden="true">
+        <circle class="track" cx="75" cy="75" r="64" fill="none" stroke-width="6"/>
+        <circle class="bar" id="ring" cx="75" cy="75" r="64" fill="none" stroke-width="6" stroke-linecap="round" transform="rotate(-90 75 75)"/>
+        <text id="clock" x="75" y="86" text-anchor="middle">10:00</text>
+      </svg>
+      <small>Puedo, pero solo con Dios.</small>
+    </div>
+    <button class="btn primary" id="overcome">Lo superé</button>
+    <button class="btn ghost" id="closeHelp">Cerrar</button>
+  </div>
+</div>
+
+<!-- Reinicio -->
+<div class="overlay" id="reset" role="dialog" aria-modal="true" aria-labelledby="resetTitle">
+  <div class="sheet">
+    <h2 id="resetTitle">Levántate y sigue.</h2>
+    <p>Una caída no borra el camino que llevas. Busca la confesión, recibe la misericordia y empieza de nuevo hoy. Tu mejor racha se queda guardada.</p>
+    <button class="btn primary" id="confirmReset">Empezar de nuevo hoy</button>
+    <button class="btn ghost" id="cancelReset">Regresar</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  const HABITS = [
+    {id:"misa", name:"Misa"},
+    {id:"ejercicio", name:"Ejercicio"},
+    {id:"celular", name:"Celular fuera del cuarto"},
+    {id:"gracias", name:"Dar gracias por tres cosas"}
+  ];
+  const PHRASES = [
+    "Todo lo puedo en Cristo que me fortalece.",
+    "Te basta mi gracia.",
+    "Crea en mí, oh Dios, un corazón puro.",
+    "No temas, yo estoy contigo.",
+    "Vengan a mí los que están cansados.",
+    "Puedo, pero solo con Dios.",
+    "Hoy, solo por hoy."
+  ];
+  const KEY = "senda-estado";
+  const $ = id => document.getElementById(id);
+
+  const pad = n => String(n).padStart(2,"0");
+  const ymd = d => d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+  const parse = s => { const [y,m,d]=s.split("-").map(Number); return new Date(y,m-1,d); };
+  const daysBetween = (a,b) => Math.round((parse(b)-parse(a))/86400000);
+  const addDays = (s,n) => { const d=parse(s); d.setDate(d.getDate()+n); return ymd(d); };
+  const today = () => ymd(new Date());
+
+  function fresh(){ return {start:today(), best:0, wins:0, log:{}, updated:Date.now()}; }
+  function valid(s){ return s && typeof s.start==="string" && typeof s.log==="object"; }
+
+  let state;
+  try { const raw = localStorage.getItem(KEY); state = raw ? JSON.parse(raw) : null; } catch(e){ state = null; }
+  if(!valid(state)) state = fresh();
+
+
+  function save(){
+    state.updated = Date.now();
+    try { localStorage.setItem(KEY, JSON.stringify(state)); } catch(e){}
+  }
+
+  function streakDays(){ return Math.max(0, daysBetween(state.start, today())); }
+  function habitStreak(id){
+    let d = today(), n = 0;
+    if(!(state.log[d] && state.log[d][id])) d = addDays(d,-1);
+    while(state.log[d] && state.log[d][id]){ n++; d = addDays(d,-1); }
+    return n;
+  }
+
+  function render(){
+    const t = today();
+    const n = streakDays();
+    if(n > state.best) state.best = n;
+    $("today").textContent = new Date().toLocaleDateString("es-MX",{weekday:"long", day:"numeric", month:"long"});
+    $("count").textContent = n;
+    $("countLabel").textContent = n === 1 ? "día firme" : "días firmes";
+    $("phrase").textContent = "“" + PHRASES[(parse(t).getTime()/86400000|0) % PHRASES.length] + "”";
+
+    const week = $("week"); week.innerHTML = "";
+    for(let i=6;i>=0;i--){
+      const d = addDays(t,-i);
+      const el = document.createElement("span");
+      const dot = document.createElement("i");
+      if(daysBetween(state.start,d) >= 1 || (d===t && n>0)) dot.classList.add("on");
+      if(d===t) dot.classList.add("today");
+      el.appendChild(dot);
+      el.appendChild(document.createTextNode(parse(d).toLocaleDateString("es-MX",{weekday:"narrow"})));
+      week.appendChild(el);
+    }
+
+    const list = $("habits"); list.innerHTML = "";
+    HABITS.forEach(h => {
+      const doneToday = !!(state.log[t] && state.log[t][h.id]);
+      const s = habitStreak(h.id);
+      const li = document.createElement("li");
+      const b = document.createElement("button");
+      b.className = "habit"; b.setAttribute("aria-pressed", doneToday);
+      b.innerHTML = '<span class="check"><svg viewBox="0 0 16 16"><path d="M3 8.5l3 3 7-7" fill="none" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg></span><span class="name"></span><span class="streak"></span>';
+      b.querySelector(".name").textContent = h.name;
+      b.querySelector(".streak").textContent = s ? (s + (s===1?" día":" días")) : "";
+      b.addEventListener("click", () => {
+        state.log[t] = state.log[t] || {};
+        state.log[t][h.id] = !doneToday;
+        save(); render();
+      });
+      li.appendChild(b); list.appendChild(li);
+    });
+
+    $("best").textContent = state.best;
+    $("wins").textContent = state.wins;
+  }
+
+  /* Ayuda */
+  const C = 2*Math.PI*64, TOTAL = 600;
+  let left = TOTAL, tick = null, helpHTML = $("helpBody").innerHTML;
+  function draw(){
+    $("clock").textContent = Math.floor(left/60) + ":" + pad(left%60);
+    $("ring").style.strokeDashoffset = C * (1 - left/TOTAL);
+  }
+  function openHelp(){
+    left = TOTAL; draw();
+    $("help").classList.add("open");
+    clearInterval(tick);
+    tick = setInterval(() => { if(left>0){ left--; draw(); } else clearInterval(tick); }, 1000);
+    $("closeHelp").focus();
+  }
+  function closeHelp(){ clearInterval(tick); $("help").classList.remove("open"); }
+  function overcome(){
+    state.wins = (state.wins||0) + 1; save(); render();
+    clearInterval(tick);
+    const body = $("helpBody");
+    body.innerHTML = '<div class="done-msg"><h2>Una victoria más.</h2><p>Dios estuvo contigo en esto. Gracias por no soltar su mano.</p><button class="btn primary" id="doneBtn">Regresar</button></div>';
+    $("doneBtn").addEventListener("click", () => {
+      $("help").classList.remove("open");
+      body.innerHTML = helpHTML; bindHelp();
+    });
+    $("doneBtn").focus();
+  }
+  function bindHelp(){
+    $("ring").style.strokeDasharray = C;
+    $("closeHelp").addEventListener("click", closeHelp);
+    $("overcome").addEventListener("click", overcome);
+  }
+  $("openHelp").addEventListener("click", openHelp);
+  bindHelp();
+
+  /* Reinicio */
+  $("openReset").addEventListener("click", () => { $("reset").classList.add("open"); $("cancelReset").focus(); });
+  $("cancelReset").addEventListener("click", () => $("reset").classList.remove("open"));
+  $("confirmReset").addEventListener("click", () => {
+    state.best = Math.max(state.best, streakDays());
+    state.start = today();
+    save(); render();
+    $("reset").classList.remove("open");
+  });
+
+  document.addEventListener("keydown", e => {
+    if(e.key === "Escape"){ closeHelp(); $("reset").classList.remove("open"); }
+  });
+
+  render();
+  setInterval(render, 60000);
+
+})();
+</script>
+<script>
+if("serviceWorker" in navigator){window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));}
+</script>
+</body>
+</html>
